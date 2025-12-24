@@ -99,7 +99,7 @@ jobs:
     needs: change-detection
     if: needs.change-detection.outputs.source-changed == 'true' || needs.change-detection.outputs.github-actions-changed == 'true'
 
-    name: "[node20] E2E Testing"
+    name: "[node] E2E Testing"
     runs-on: ubuntu-latest
     permissions:
       contents: read
