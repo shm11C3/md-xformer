@@ -1,0 +1,117 @@
+name: "CI-step-4.2"
+
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - master
+
+jobs:
+  change-detection:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    outputs:
+      source-changed: ${{ steps.changes.outputs.source }}
+      deps-changed: ${{ steps.changes.outputs.deps }}
+      github-actions-changed: ${{ steps.changes.outputs['github-actions'] }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check changed files
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: changes
+        with:
+          filters: |
+            source:
+              - 'src/**'
+              - 'tests/**'
+              - 'tsconfig*.json'
+              - 'package*.json'
+              - 'biome.jsonc'
+              - '*.ts'
+
+            deps:
+              - 'package*.json'
+
+            github-actions:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+              - '.github/scripts/**'
+              - 'scripts/**'
+
+  lint:
+    needs: change-detection
+    if: needs.change-detection.outputs.source-changed == 'true' || needs.change-detection.outputs.github-actions-changed == 'true'
+
+    name: "[node] Linting"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-node
+
+      - name: Lint
+        run: npm run lint:ci
+
+  build:
+    needs: change-detection
+    if: needs.change-detection.outputs.source-changed == 'true' || needs.change-detection.outputs.github-actions-changed == 'true'
+
+    name: "[node] Typechecking and Building"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-node
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  test:
+    needs: change-detection
+    if: needs.change-detection.outputs.source-changed == 'true' || needs.change-detection.outputs.github-actions-changed == 'true'
+
+    name: "[node] Testing"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-node
+
+      - name: Test
+        run: npm test
+
+  merge-gate:
+    name: "Merge Gate"
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs:
+      - change-detection
+      - lint
+      - build
+      - test
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Gate (fail on failure/cancelled)
+        env:
+          NEEDS_JSON: ${{ toJson(needs) }}
+        run: node .github/scripts/merge-gate.ts

@@ -39,7 +39,8 @@
     "test:e2e": "vitest run tests/e2e",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "format": "biome format --write",
-    "lint": "biome check"
+    "lint": "biome check",
+    "lint:ci": "biome ci"
   },
   "dependencies": {
     "highlight.js": "^11.11.1",
