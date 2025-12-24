@@ -1,0 +1,89 @@
+name: "Publish to npm"
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate:
+    name: "Validate tag & branch"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      dist-tag: ${{ steps.meta.outputs.dist_tag }}
+    steps:
+      - name: Checkout repository (full history)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG_NAME="${GITHUB_REF_NAME}"
+          if [[ "$TAG_NAME" != v* ]]; then
+            echo "Expected tag starting with 'v', got: $TAG_NAME" >&2
+            exit 1
+          fi
+
+          VERSION="${TAG_NAME#v}"
+
+          case "$VERSION" in
+            *-alpha.*)
+              DIST_TAG="alpha"
+              ;;
+            *-beta.*)
+              DIST_TAG="beta"
+              ;;
+            *-rc.*)
+              DIST_TAG="rc"
+              ;;
+            *-*)
+              echo "Unsupported prerelease tag: $TAG_NAME" >&2
+              echo "Allowed prerelease channels: alpha, beta, rc" >&2
+              exit 1
+              ;;
+            *)
+              DIST_TAG="latest"
+              ;;
+          esac
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: "Publish"
+    runs-on: ubuntu-latest
+    needs:
+      - validate
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm CLI supports trusted publishing
+        run: |
+          npm install -g "npm@^11.5.1"
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish to npm (OIDC)
+        run: npm publish --access public --tag "${{ needs.validate.outputs.dist-tag }}"
