@@ -1,0 +1,23 @@
+# npm package should include runtime artifacts only.
+# NOTE: package.json already has "files": ["dist"], so this is mostly defense-in-depth.
+
+# Dev sources / tests
+src/
+tests/
+coverage/
+
+# Tooling / configs (keep package.json/README.md/LICENSE)
+.vscode/
+biome.jsonc
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+
+# VCS / OS junk
+.git/
+.gitignore
+.DS_Store
+
+# Dependencies / local artifacts
+node_modules/
+*.log
