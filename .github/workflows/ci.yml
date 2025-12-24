@@ -1,4 +1,4 @@
-name: "CI-step-4.2"
+name: "CI"
 
 on:
   pull_request:
