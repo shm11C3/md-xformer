@@ -85,5 +85,7 @@ jobs:
       - name: Build package
         run: npm run build
 
+      - name: Run tests
+        run: npm test
       - name: Publish to npm (OIDC)
-        run: npm publish --access public --tag "${{ needs.validate.outputs.dist-tag }}"
+        run: npm publish --access public
