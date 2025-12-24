@@ -83,7 +83,7 @@ jobs:
     needs: change-detection
     if: needs.change-detection.outputs.source-changed == 'true' || needs.change-detection.outputs.github-actions-changed == 'true'
 
-    name: "[node] Testing"
+    name: "[node] Unit Testing"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -92,8 +92,31 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-node
 
-      - name: Test
-        run: npm test
+      - name: Test (unit)
+        run: npm run test:unit
+
+  test-e2e:
+    needs: change-detection
+    if: needs.change-detection.outputs.source-changed == 'true' || needs.change-detection.outputs.github-actions-changed == 'true'
+
+    name: "[node] E2E Testing"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 24]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-node
+        with:
+          node-version: "${{ matrix['node-version'] }}"
+
+      - name: Test (e2e)
+        run: npm run test:e2e
 
   merge-gate:
     name: "Merge Gate"
@@ -104,6 +127,7 @@ jobs:
       - lint
       - build
       - test
+      - test-e2e
     permissions:
       contents: read
 
