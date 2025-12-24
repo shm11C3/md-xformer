@@ -40,7 +40,7 @@ function main() {
     const result = needs[name]?.result ?? "unknown";
     console.log(`${name}: ${result}`);
 
-    // success と skipped はOK、それ以外はNG（failure/cancelled/unknown 等）
+    // success and skipped are OK; other results (failure/cancelled/unknown, etc.) are NG
     if (result !== "success" && result !== "skipped") {
       console.error(`NG  - ${name} (${result})`);
       failed = true;
