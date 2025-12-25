@@ -1,6 +1,6 @@
 {
   "name": "md-xformer",
-  "version": "0.0.0-alpha.0",
+  "version": "0.0.0-alpha.1",
   "description": "A CLI tool that converts Markdown into template-based HTML.",
   "license": "MIT",
   "author": "shm11C3",
