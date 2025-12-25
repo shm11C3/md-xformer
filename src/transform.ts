@@ -17,6 +17,7 @@ const md: MarkdownIt = new MarkdownIt({
   linkify: true,
   typographer: true,
   // markdown-it calls highlight(code, lang, attrs)
+  // Returns only inner HTML (no <pre><code> wrapper) for template support
   highlight(code: string, lang?: string): string {
     if (lang && hljs.getLanguage(lang)) {
       try {
@@ -24,7 +25,7 @@ const md: MarkdownIt = new MarkdownIt({
           language: lang,
           ignoreIllegals: true,
         }).value;
-        return `<pre><code class="hljs language-${lang}">${highlighted}</code></pre>`;
+        return highlighted;
       } catch {
         // noop
       }
@@ -32,7 +33,7 @@ const md: MarkdownIt = new MarkdownIt({
 
     // 言語指定なし or 未対応言語
     const escaped = mdUtils.escapeHtml(code);
-    return `<pre><code class="hljs">${escaped}</code></pre>`;
+    return escaped;
   },
 });
 
@@ -82,6 +83,49 @@ function applyTemplatePlaceholder(
   return out;
 }
 
+/**
+ * Apply template with support for raw HTML injection via triple braces {{{ }}}
+ * Regular {{ }} placeholders escape HTML, triple {{{ }}} inject raw HTML
+ */
+function applyTemplateWithRawHtml(
+  templates: Templates,
+  tag: string,
+  vars: Record<string, string>,
+  rawVars: Set<string>,
+  verbose: boolean,
+): string {
+  const t = templates.get(tag);
+  if (!t) {
+    // No template available, fallback handled by caller
+    return "";
+  }
+
+  let out = t;
+  
+  // First pass: replace raw HTML variables (triple braces)
+  for (const key of rawVars) {
+    const value = vars[key] ?? "";
+    const placeholder = `{{{ ${key} }}}`;
+    if (out.includes(placeholder)) {
+      out = out.split(placeholder).join(value);
+    } else if (verbose) {
+      console.warn(
+        `[warn] template "${tag}" expected raw placeholder "{{{ ${key} }}}"`,
+      );
+    }
+  }
+
+  // Second pass: replace escaped variables (double braces)
+  for (const [key, value] of Object.entries(vars)) {
+    if (rawVars.has(key)) continue; // already handled
+    const placeholder = `{{ ${key} }}`;
+    const escaped = mdUtils.escapeHtml(value);
+    out = out.split(placeholder).join(escaped);
+  }
+
+  return out;
+}
+
 function renderInline(
   renderer: Renderer,
   tokens: Token[],
@@ -101,6 +145,71 @@ function defaultRenderToken(
   const rule = renderer.rules[token.type];
   if (rule) return rule(tokens, idx, md.options, env, renderer);
   return renderer.renderToken(tokens, idx, md.options);
+}
+
+/**
+ * Custom fence renderer that supports codeblock templates
+ */
+function renderFence(
+  tokens: Token[],
+  idx: number,
+  templates: Templates,
+  verbose: boolean,
+): string {
+  const token = tokens[idx];
+  const code = token.content;
+  
+  // Extract language from token.info (e.g. "typescript " -> "typescript")
+  const info = token.info ? token.info.trim() : "";
+  const langMatch = info.match(/^(\S+)/);
+  const rawLang = langMatch ? langMatch[1] : "";
+  
+  // Normalize lang for template (default to "text" if not specified)
+  const lang = rawLang || "text";
+  
+  // Check if language is supported by highlight.js
+  let isSupported = false;
+  let highlightedHtml = "";
+  
+  if (rawLang && hljs.getLanguage(rawLang)) {
+    try {
+      // Try to highlight with the language
+      const result = hljs.highlight(code, {
+        language: rawLang,
+        ignoreIllegals: true,
+      }).value;
+      highlightedHtml = result;
+      isSupported = true;
+    } catch {
+      // If highlighting fails, fall back to escaped output
+      highlightedHtml = mdUtils.escapeHtml(code);
+    }
+  } else {
+    // Language not specified or not supported
+    highlightedHtml = mdUtils.escapeHtml(code);
+  }
+  
+  // Try to apply codeblock template
+  const template = applyTemplateWithRawHtml(
+    templates,
+    "codeblock",
+    {
+      lang,
+      code: highlightedHtml,
+      raw: code,
+    },
+    new Set(["code"]), // "code" should be injected as raw HTML
+    verbose,
+  );
+  
+  if (template) {
+    return template;
+  }
+  
+  // Fallback to default wrapper when no template exists
+  // Only add language class if the language is supported and highlighting succeeded
+  const langClass = isSupported ? ` language-${rawLang}` : "";
+  return `<pre><code class="hljs${langClass}">${highlightedHtml}</code></pre>\n`;
 }
 
 export function transformMarkdownToHtml(
@@ -157,6 +266,12 @@ export function transformMarkdownToHtml(
       out += applyTemplate(templates, tag, inner, verbose);
 
       i += 2;
+      continue;
+    }
+
+    // fence : code blocks with ```
+    if (tok.type === "fence") {
+      out += renderFence(tokens, i, templates, verbose);
       continue;
     }
 
