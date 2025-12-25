@@ -111,4 +111,4 @@ const x: number = 1;
 
 ## License
 
-[MIT License](https://opensource.org/license/mit/)
+[MIT License](LICENSE)
