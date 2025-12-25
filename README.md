@@ -74,7 +74,7 @@ template/
 ├── h1.template.html
 ├── h2.template.html
 ├── h3.template.html
-├── code.template.html # in progress
+├── codeblock.template.html
 ├── document.template.html # in progress 
 └── p.template.html
 ```
@@ -82,13 +82,40 @@ template/
 ### Example: `h2.template.html`
 
 ```html
-<h2 id="{{ id }}">{{ content }}</h2>
+<h2 id="{{ id }}">{{ h2 }}</h2>
 ```
 
 Common template variables:
 
-- `{{ content }}` — Inner text or HTML
-- `{{ id }}` — Slugified heading ID
+- `{{ content }}` — Inner text or HTML (for most elements)
+- `{{ id }}` — Slugified heading ID (for headings)
+
+### Example: `codeblock.template.html`
+
+You can customize the HTML wrapper for fenced code blocks:
+
+```html
+<pre class="code-block">
+  <div class="code-block__meta">
+    <span class="code-block__lang">{{ lang }}</span>
+  </div>
+  <code class="hljs language-{{ lang }}">{{{ code }}}</code>
+</pre>
+```
+
+**Available variables:**
+
+- `{{ lang }}` — Language name (e.g., `typescript`, `python`, or `text` if not specified)
+- `{{{ code }}}` — Highlighted HTML from highlight.js (**raw HTML**, use triple braces)
+- `{{ raw }}` — Original code as escaped text (safe for display)
+
+**Important:** Use triple braces `{{{ code }}}` to inject the highlighted HTML without escaping. Regular double braces `{{ }}` will escape HTML entities.
+
+If no `codeblock.template.html` is provided, the default wrapper is used:
+
+```html
+<pre><code class="hljs language-{lang}">...</code></pre>
+```
 
 ## Syntax Highlighting
 
