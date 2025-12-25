@@ -151,4 +151,217 @@ describe("CLI (dist)", () => {
     expect(existsSync(path.join(root, "out", "old.txt"))).toBe(false);
     expect(existsSync(path.join(root, "out", "input", "a.html"))).toBe(true);
   });
+
+  it("applies codeblock template with custom wrapper", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-codeblock-");
+    created.push(root);
+
+    const inputDir = path.join(root, "input");
+    const outDir = path.join(root, "out");
+    const templateDir = path.join(root, "template");
+
+    await fs.mkdir(inputDir, { recursive: true });
+    await fs.mkdir(templateDir, { recursive: true });
+
+    // Create codeblock template with custom wrapper
+    await fs.writeFile(
+      path.join(templateDir, "codeblock.template.html"),
+      '<div class="code-wrapper" data-lang="{{ lang }}">\n' +
+        '  <div class="code-header">Language: {{ lang }}</div>\n' +
+        '  <pre><code class="hljs">{{{ code }}}</code></pre>\n' +
+        "</div>",
+    );
+
+    // Create markdown with code blocks
+    await fs.writeFile(
+      path.join(inputDir, "code.md"),
+      "# Code Examples\n\n" +
+        "```javascript\n" +
+        "const x = 1;\n" +
+        "console.log(x);\n" +
+        "```\n",
+    );
+
+    const res = spawnSync(
+      process.execPath,
+      [cli, "input", "-o", "out", "-t", "template"],
+      {
+        cwd: root,
+        encoding: "utf-8",
+      },
+    );
+
+    expect(res.status).toBe(0);
+
+    const outFile = path.join(outDir, "input", "code.html");
+    expect(existsSync(outFile)).toBe(true);
+
+    const html = await fs.readFile(outFile, "utf-8");
+
+    // Verify custom wrapper is applied
+    expect(html).toContain('class="code-wrapper"');
+    expect(html).toContain('data-lang="javascript"');
+    expect(html).toContain('class="code-header"');
+    expect(html).toContain("Language: javascript");
+
+    // Verify syntax highlighting is preserved
+    expect(html).toContain("<span");
+    expect(html).toContain("class=");
+    expect(html).not.toContain("&lt;span"); // HTML should not be escaped
+  });
+
+  it("uses default wrapper when codeblock template is missing", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-codeblock-default-");
+    created.push(root);
+
+    const inputDir = path.join(root, "input");
+    const outDir = path.join(root, "out");
+    const templateDir = path.join(root, "template");
+
+    await fs.mkdir(inputDir, { recursive: true });
+    await fs.mkdir(templateDir, { recursive: true });
+
+    // Create h2 template but NO codeblock template
+    await fs.writeFile(
+      path.join(templateDir, "h2.template.html"),
+      '<h2 id="{{ id }}">{{ h2 }}</h2>',
+    );
+
+    // Create markdown with code blocks
+    await fs.writeFile(
+      path.join(inputDir, "code.md"),
+      "## Code\n\n" + "```typescript\n" + "const x: number = 1;\n" + "```\n",
+    );
+
+    const res = spawnSync(
+      process.execPath,
+      [cli, "input", "-o", "out", "-t", "template"],
+      {
+        cwd: root,
+        encoding: "utf-8",
+      },
+    );
+
+    expect(res.status).toBe(0);
+
+    const outFile = path.join(outDir, "input", "code.html");
+    expect(existsSync(outFile)).toBe(true);
+
+    const html = await fs.readFile(outFile, "utf-8");
+
+    // Verify default wrapper is used
+    expect(html).toContain("<pre><code");
+    expect(html).toContain('class="hljs language-typescript"');
+    expect(html).toContain("</code></pre>");
+
+    // Verify syntax highlighting still works
+    expect(html).toContain("<span");
+  });
+
+  it("exposes lang and raw variables in codeblock template", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-codeblock-vars-");
+    created.push(root);
+
+    const inputDir = path.join(root, "input");
+    const outDir = path.join(root, "out");
+    const templateDir = path.join(root, "template");
+
+    await fs.mkdir(inputDir, { recursive: true });
+    await fs.mkdir(templateDir, { recursive: true });
+
+    // Create codeblock template using all variables
+    await fs.writeFile(
+      path.join(templateDir, "codeblock.template.html"),
+      '<div class="code-block">\n' +
+        '  <span class="lang-badge">{{ lang }}</span>\n' +
+        '  <pre class="highlighted">{{{ code }}}</pre>\n' +
+        '  <pre class="raw" hidden>{{ raw }}</pre>\n' +
+        "</div>",
+    );
+
+    // Create markdown with code that has HTML
+    await fs.writeFile(
+      path.join(inputDir, "code.md"),
+      "```python\n" + "def greet():\n" + '    print("<hello>")\n' + "```\n",
+    );
+
+    const res = spawnSync(
+      process.execPath,
+      [cli, "input", "-o", "out", "-t", "template"],
+      {
+        cwd: root,
+        encoding: "utf-8",
+      },
+    );
+
+    expect(res.status).toBe(0);
+
+    const outFile = path.join(outDir, "input", "code.html");
+    const html = await fs.readFile(outFile, "utf-8");
+
+    // Verify lang variable
+    expect(html).toContain('<span class="lang-badge">python</span>');
+
+    // Verify code variable has highlighted HTML (not escaped)
+    expect(html).toContain('<pre class="highlighted">');
+    expect(html).toContain("<span"); // highlight.js spans
+
+    // Verify raw variable has escaped HTML
+    expect(html).toContain('<pre class="raw" hidden>');
+    expect(html).toContain("&lt;hello&gt;"); // HTML entities escaped
+    expect(html).not.toContain('<pre class="raw" hidden><hello>');
+  });
+
+  it("handles code blocks without language specification", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-codeblock-nolang-");
+    created.push(root);
+
+    const inputDir = path.join(root, "input");
+    const outDir = path.join(root, "out");
+    const templateDir = path.join(root, "template");
+
+    await fs.mkdir(inputDir, { recursive: true });
+    await fs.mkdir(templateDir, { recursive: true });
+
+    await fs.writeFile(
+      path.join(templateDir, "codeblock.template.html"),
+      '<div data-lang="{{ lang }}">{{{ code }}}</div>',
+    );
+
+    // Create markdown with code block without language
+    await fs.writeFile(
+      path.join(inputDir, "code.md"),
+      "```\n" + "plain text\n" + "```\n",
+    );
+
+    const res = spawnSync(
+      process.execPath,
+      [cli, "input", "-o", "out", "-t", "template"],
+      {
+        cwd: root,
+        encoding: "utf-8",
+      },
+    );
+
+    expect(res.status).toBe(0);
+
+    const outFile = path.join(outDir, "input", "code.html");
+    const html = await fs.readFile(outFile, "utf-8");
+
+    // Verify lang defaults to "text"
+    expect(html).toContain('data-lang="text"');
+    expect(html).toContain("plain text");
+  });
 });
