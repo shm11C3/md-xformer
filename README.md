@@ -85,10 +85,14 @@ template/
 <h2 id="{{ id }}">{{ h2 }}</h2>
 ```
 
-Common template variables:
+Template variables for headings:
 
-- `{{ content }}` — Inner text or HTML (for most elements)
-- `{{ id }}` — Slugified heading ID (for headings)
+- `{{ h1 }}`, `{{ h2 }}`, `{{ h3 }}`, etc. — Inner text or HTML for each heading level
+- `{{ id }}` — Slugified heading ID
+
+Template variables for other elements:
+
+- `{{ p }}` — Inner text or HTML for paragraphs
 
 ### Example: `codeblock.template.html`
 

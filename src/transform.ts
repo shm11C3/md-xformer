@@ -16,25 +16,6 @@ const md: MarkdownIt = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true,
-  // markdown-it calls highlight(code, lang, attrs)
-  // Returns only inner HTML (no <pre><code> wrapper) for template support
-  highlight(code: string, lang?: string): string {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        const highlighted = hljs.highlight(code, {
-          language: lang,
-          ignoreIllegals: true,
-        }).value;
-        return highlighted;
-      } catch {
-        // noop
-      }
-    }
-
-    // 言語指定なし or 未対応言語
-    const escaped = mdUtils.escapeHtml(code);
-    return escaped;
-  },
 });
 
 function applyTemplate(
@@ -110,7 +91,7 @@ function applyTemplateWithRawHtml(
       out = out.split(placeholder).join(value);
     } else if (verbose) {
       console.warn(
-        `[warn] template "${tag}" expected raw placeholder "{{{ ${key} }}}"`,
+        `[warn] template "${tag}" does not include raw placeholder "{{{ ${key} }}}"`,
       );
     }
   }
