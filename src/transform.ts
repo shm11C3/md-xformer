@@ -101,7 +101,7 @@ function applyTemplateWithRawHtml(
   }
 
   let out = t;
-  
+
   // First pass: replace raw HTML variables (triple braces)
   for (const key of rawVars) {
     const value = vars[key] ?? "";
@@ -158,19 +158,19 @@ function renderFence(
 ): string {
   const token = tokens[idx];
   const code = token.content;
-  
+
   // Extract language from token.info (e.g. "typescript " -> "typescript")
   const info = token.info ? token.info.trim() : "";
   const langMatch = info.match(/^(\S+)/);
   const rawLang = langMatch ? langMatch[1] : "";
-  
+
   // Normalize lang for template (default to "text" if not specified)
   const lang = rawLang || "text";
-  
+
   // Check if language is supported by highlight.js
   let isSupported = false;
   let highlightedHtml = "";
-  
+
   if (rawLang && hljs.getLanguage(rawLang)) {
     try {
       // Try to highlight with the language
@@ -188,7 +188,7 @@ function renderFence(
     // Language not specified or not supported
     highlightedHtml = mdUtils.escapeHtml(code);
   }
-  
+
   // Try to apply codeblock template
   const template = applyTemplateWithRawHtml(
     templates,
@@ -201,11 +201,11 @@ function renderFence(
     new Set(["code"]), // "code" should be injected as raw HTML
     verbose,
   );
-  
+
   if (template) {
     return template;
   }
-  
+
   // Fallback to default wrapper when no template exists
   // Only add language class if the language is supported and highlighting succeeded
   const langClass = isSupported ? ` language-${rawLang}` : "";
