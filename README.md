@@ -65,6 +65,50 @@ md-xformer articles \
 - `template` — Directory containing HTML templates (must exist)
 - `dist` — Output directory
 
+### Options
+
+#### `--allow-html`
+
+**⚠️ Security Warning: Use only with trusted input**
+
+By default, md-xformer disables raw HTML in Markdown input for security. The `--allow-html` flag enables raw HTML passthrough.
+
+**What it does:**
+- Allows HTML tags in Markdown to be rendered as HTML instead of being escaped
+- Enables use of raw HTML alongside Markdown syntax
+
+**When to use it:**
+- When you control all input sources and trust the content
+- For internal documentation where all contributors are trusted
+- When processing your own Markdown files that intentionally contain HTML
+
+**Security risks:**
+- **Cross-Site Scripting (XSS)**: Malicious HTML/JavaScript can be injected
+- **Content injection**: Untrusted users could inject arbitrary HTML
+- **Compromised integrity**: Page structure and styling can be manipulated
+
+**Example:**
+
+```bash
+# Safe: trusted input only
+md-xformer my-docs -o dist --allow-html
+
+# Unsafe: never use with untrusted or user-generated content
+md-xformer user-content -o dist --allow-html  # ❌ DANGEROUS
+```
+
+**Without `--allow-html` (default, safe):**
+```markdown
+<div class="custom">Hello</div>
+```
+Outputs: `&lt;div class="custom"&gt;Hello&lt;/div&gt;` (escaped, safe)
+
+**With `--allow-html` (requires trust):**
+```markdown
+<div class="custom">Hello</div>
+```
+Outputs: `<div class="custom">Hello</div>` (raw HTML, potentially unsafe)
+
 ## Template Structure
 
 Templates are matched to Markdown elements **by filename**.
