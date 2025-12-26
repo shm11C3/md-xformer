@@ -37,6 +37,25 @@ describe("CLI (dist)", () => {
     expect(res.stdout).toContain("Usage:");
   });
 
+  it("runs when invoked via symlink path", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-symlink-");
+    created.push(root);
+
+    const linkPath = path.join(root, "md-xformer-symlink.js");
+    await fs.symlink(cli, linkPath);
+
+    // Run through node so argv[1] is the symlink path.
+    const res = spawnSync(process.execPath, [linkPath, "--help"], {
+      encoding: "utf-8",
+    });
+
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("Usage:");
+  });
+
   it("converts markdown directory into html output", async () => {
     const cli = distCliPath();
     expect(existsSync(cli)).toBe(true);
