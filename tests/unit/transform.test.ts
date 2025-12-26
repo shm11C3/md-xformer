@@ -27,6 +27,23 @@ describe("transformMarkdownToHtml", () => {
     expect(html).toContain('<p class="lead">Hello <strong>bold</strong></p>');
   });
 
+  it("escapes raw HTML by default", () => {
+    const t = templates([["p", "<p>{{ p }}</p>"]]);
+
+    const html = transformMarkdownToHtml("Hello <b>raw</b>\n", t);
+    expect(html).toContain("Hello &lt;b&gt;raw&lt;/b&gt;");
+    expect(html).not.toContain("<b>raw</b>");
+  });
+
+  it("allows raw HTML when allowHtml option is enabled", () => {
+    const t = templates([["p", "<p>{{ p }}</p>"]]);
+
+    const html = transformMarkdownToHtml("Hello <b>raw</b>\n", t, {
+      allowHtml: true,
+    });
+    expect(html).toContain("Hello <b>raw</b>");
+  });
+
   it("falls back to normal tags when template is missing", () => {
     const t = templates([]);
 

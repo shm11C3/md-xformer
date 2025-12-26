@@ -50,7 +50,7 @@ npx md-xformer --help
 ## Usage
 
 ```bash
-md-xformer <input> -o <outDir> [-t <templateDir>] [--ext html] [--clean] [--dry-run] [--verbose]
+md-xformer <input> -o <outDir> [-t <templateDir>] [--ext html] [--clean] [--dry-run] [--verbose] [--allow-html]
 ```
 
 ### Example

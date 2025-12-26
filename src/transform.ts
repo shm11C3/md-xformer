@@ -6,13 +6,20 @@ import type { Templates } from "./templates.js";
 
 type TransformOptions = {
   verbose?: boolean;
+  allowHtml?: boolean;
 };
 
 type MarkdownEnv = Record<string, unknown>;
 
 const mdUtils = new MarkdownIt().utils;
 
-const md: MarkdownIt = new MarkdownIt({
+const mdDefault: MarkdownIt = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true,
+});
+
+const mdAllowHtml: MarkdownIt = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true,
@@ -108,6 +115,7 @@ function applyTemplateWithRawHtml(
 }
 
 function renderInline(
+  md: MarkdownIt,
   renderer: Renderer,
   tokens: Token[],
   env: MarkdownEnv,
@@ -117,6 +125,7 @@ function renderInline(
 }
 
 function defaultRenderToken(
+  md: MarkdownIt,
   renderer: Renderer,
   tokens: Token[],
   idx: number,
@@ -198,6 +207,7 @@ export function transformMarkdownToHtml(
   templates: Templates,
   opts: TransformOptions = {},
 ): string {
+  const md = opts.allowHtml ? mdAllowHtml : mdDefault;
   const env: MarkdownEnv = {};
   const tokens = md.parse(markdown, env);
   const r = md.renderer;
@@ -213,11 +223,11 @@ export function transformMarkdownToHtml(
       const tag = tok.tag.toLowerCase(); // h1, h2, ...
       const inline = tokens[i + 1];
       if (!inline || inline.type !== "inline") {
-        out += defaultRenderToken(r, tokens, i, env);
+        out += defaultRenderToken(md, r, tokens, i, env);
         continue;
       }
 
-      const inner = renderInline(r, inline.children ?? [], env);
+      const inner = renderInline(md, r, inline.children ?? [], env);
       const id = slugify(inner);
 
       out += applyTemplatePlaceholder(
@@ -239,11 +249,11 @@ export function transformMarkdownToHtml(
       const tag = "p";
       const inline = tokens[i + 1];
       if (!inline || inline.type !== "inline") {
-        out += defaultRenderToken(r, tokens, i, env);
+        out += defaultRenderToken(md, r, tokens, i, env);
         continue;
       }
 
-      const inner = renderInline(r, inline.children ?? [], env);
+      const inner = renderInline(md, r, inline.children ?? [], env);
       out += applyTemplate(templates, tag, inner, verbose);
 
       i += 2;
@@ -257,7 +267,7 @@ export function transformMarkdownToHtml(
     }
 
     // everything else: let markdown-it render as usual
-    out += defaultRenderToken(r, tokens, i, env);
+    out += defaultRenderToken(md, r, tokens, i, env);
   }
 
   return out;
