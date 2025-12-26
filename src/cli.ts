@@ -15,13 +15,14 @@ type CliOptions = {
   clean: boolean;
   dryRun: boolean;
   verbose: boolean;
+  allowHtml: boolean;
 };
 
 function printHelp(): void {
   console.log(
     `
 Usage:
-  md-xformer <input> -o <outDir> [-t <templateDir>] [--ext html] [--clean] [--dry-run] [--verbose]
+  md-xformer <input> -o <outDir> [-t <templateDir>] [--ext html] [--clean] [--dry-run] [--verbose] [--allow-html]
 
 <input>:
   file path (.md) OR directory path (recursively finds **/*.md)
@@ -33,6 +34,7 @@ Options:
   --clean              Remove output directory before build
   --dry-run            Print what would be generated without writing
   --verbose            Verbose logs
+  --allow-html          Allow raw HTML in Markdown input (unsafe for untrusted input)
   -h, --help           Show help
 `.trim(),
   );
@@ -75,6 +77,7 @@ async function mainWithArgs(argv: string[]): Promise<number> {
       clean: { type: "boolean" },
       "dry-run": { type: "boolean" },
       verbose: { type: "boolean" },
+      "allow-html": { type: "boolean" },
       help: { type: "boolean", short: "h" },
     },
     allowPositionals: true,
@@ -95,6 +98,7 @@ async function mainWithArgs(argv: string[]): Promise<number> {
     clean: Boolean(values.clean),
     dryRun: Boolean(values["dry-run"]),
     verbose: Boolean(values.verbose),
+    allowHtml: Boolean(values["allow-html"]),
   };
 
   if (!opts.outDir) die("ERROR: --out-dir (-o) is required.");
@@ -139,6 +143,7 @@ async function mainWithArgs(argv: string[]): Promise<number> {
       const md = await fs.readFile(mdFileAbs, "utf-8");
       const html = transformMarkdownToHtml(md, templates, {
         verbose: opts.verbose,
+        allowHtml: opts.allowHtml,
       });
 
       const outFileAbs = toOutPath(mdFileAbs, cwd, outAbs, opts.ext);

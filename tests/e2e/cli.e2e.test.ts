@@ -35,6 +35,7 @@ describe("CLI (dist)", () => {
 
     expect(res.status).toBe(0);
     expect(res.stdout).toContain("Usage:");
+    expect(res.stdout).toContain("--allow-html");
   });
 
   it("runs when invoked via symlink path", async () => {
@@ -101,6 +102,52 @@ describe("CLI (dist)", () => {
     const html = await fs.readFile(outFile, "utf-8");
     expect(html).toContain('<h2 id="hello-world">Hello, World!</h2>');
     expect(html).toContain('<p class="p">Hello <strong>bold</strong></p>');
+  });
+
+  it("escapes raw HTML by default, and allows it with --allow-html", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-allow-html-");
+    created.push(root);
+
+    const inputDir = path.join(root, "input");
+    const outSafe = path.join(root, "out-safe");
+    const outAllow = path.join(root, "out-allow");
+    const templateDir = path.join(root, "template");
+
+    await fs.mkdir(inputDir, { recursive: true });
+    await fs.mkdir(templateDir, { recursive: true });
+
+    await fs.writeFile(path.join(templateDir, "p.template.html"), "<p>{{ p }}</p>");
+    await fs.writeFile(path.join(inputDir, "a.md"), "Hello <b>raw</b>\n");
+
+    const safeRes = spawnSync(
+      process.execPath,
+      [cli, "input", "-o", "out-safe", "-t", "template"],
+      { cwd: root, encoding: "utf-8" },
+    );
+    expect(safeRes.status).toBe(0);
+
+    const safeOutFile = path.join(outSafe, "input", "a.html");
+    expect(existsSync(safeOutFile)).toBe(true);
+
+    const safeHtml = await fs.readFile(safeOutFile, "utf-8");
+    expect(safeHtml).toContain("Hello &lt;b&gt;raw&lt;/b&gt;");
+    expect(safeHtml).not.toContain("<b>raw</b>");
+
+    const allowRes = spawnSync(
+      process.execPath,
+      [cli, "input", "-o", "out-allow", "-t", "template", "--allow-html"],
+      { cwd: root, encoding: "utf-8" },
+    );
+    expect(allowRes.status).toBe(0);
+
+    const allowOutFile = path.join(outAllow, "input", "a.html");
+    expect(existsSync(allowOutFile)).toBe(true);
+
+    const allowHtml = await fs.readFile(allowOutFile, "utf-8");
+    expect(allowHtml).toContain("Hello <b>raw</b>");
   });
 
   it("fails without --out-dir", () => {
