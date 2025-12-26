@@ -34,7 +34,7 @@ Options:
   --clean              Remove output directory before build
   --dry-run            Print what would be generated without writing
   --verbose            Verbose logs
-  --allow-html          Allow raw HTML in Markdown input (unsafe for untrusted input)
+  --allow-html         Allow raw HTML in Markdown input (unsafe for untrusted input)
   -h, --help           Show help
 `.trim(),
   );
