@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -177,9 +177,21 @@ async function mainWithArgs(argv: string[]): Promise<number> {
 }
 
 const invoked = process.argv[1];
-const isMain =
-  typeof invoked === "string" &&
-  path.resolve(invoked) === path.resolve(fileURLToPath(import.meta.url));
+const isMain = (() => {
+  if (typeof invoked !== "string") return false;
+  try {
+    // When installed via npm, the bin may be a symlink (node_modules/.bin).
+    // Compare real paths so the CLI still runs when invoked through a symlink.
+    const invokedReal = realpathSync(invoked);
+    const selfReal = realpathSync(fileURLToPath(import.meta.url));
+    return invokedReal === selfReal;
+  } catch {
+    // Fallback: best-effort path compare
+    return (
+      path.resolve(invoked) === path.resolve(fileURLToPath(import.meta.url))
+    );
+  }
+})();
 
 if (isMain) {
   const exitCode = await runCli(process.argv.slice(2));
