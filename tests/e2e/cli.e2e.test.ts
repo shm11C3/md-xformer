@@ -119,7 +119,10 @@ describe("CLI (dist)", () => {
     await fs.mkdir(inputDir, { recursive: true });
     await fs.mkdir(templateDir, { recursive: true });
 
-    await fs.writeFile(path.join(templateDir, "p.template.html"), "<p>{{ p }}</p>");
+    await fs.writeFile(
+      path.join(templateDir, "p.template.html"),
+      "<p>{{ p }}</p>",
+    );
     await fs.writeFile(path.join(inputDir, "a.md"), "Hello <b>raw</b>\n");
 
     const safeRes = spawnSync(
