@@ -1,13 +1,13 @@
 import { existsSync, realpathSync } from "node:fs";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
+import { buildMarkdownFiles } from "./build.js";
 import { listPresets, runInit } from "./init.js";
-import { collectMarkdownFiles, ensureDir, removeDir, toOutPath } from "./io.js";
+import { collectMarkdownFiles, ensureDir, removeDir } from "./io.js";
 import { loadTemplates } from "./templates.js";
-import { transformMarkdownToHtml } from "./transform.js";
+import { runWatch } from "./watch.js";
 
 type CliOptions = {
   templateDir: string;
@@ -24,10 +24,12 @@ function printHelp(): void {
     `
 Usage:
   md-xformer <input> -o <outDir> [-t <templateDir>] [--ext html] [--clean] [--dry-run] [--verbose] [--allow-html]
+  md-xformer watch <input> [-t <templateDir>] [-o <outDir>] [--dir <path>] [--include <glob>] [--ignore <glob>] [--debounce <ms>] [--once] [--verbose]
   md-xformer init [--preset <name>] [--dir <path>] [--force] [--dry-run]
 
 Commands:
   (default)            Convert Markdown to HTML
+  watch                Watch files and rebuild on changes
   init                 Scaffold a new project with templates and sample content
 
 Transform options:
@@ -39,6 +41,17 @@ Transform options:
   --dry-run            Print what would be generated without writing
   --verbose            Verbose logs
   --allow-html         Allow raw HTML in Markdown input (unsafe for untrusted input)
+
+Watch options:
+  <input>              File or directory to watch
+  -t, --template       Template preset or directory (default: .md-xformer/templates)
+  -o, --out            Output file or directory (required)
+  --dir                Working directory (default: current directory)
+  --include            Additional watch glob patterns (repeatable)
+  --ignore             Ignore patterns (repeatable)
+  --debounce           Debounce interval in milliseconds (default: 200)
+  --once               Run a single build then exit
+  --verbose            More logging
 
 Init options:
   --preset <name>      Scaffold preset (default: example)
@@ -64,6 +77,69 @@ class CliError extends Error {
 
 function die(msg: string, exitCode = 1): never {
   throw new CliError(msg, exitCode);
+}
+
+async function handleWatchCommand(argv: string[]): Promise<number> {
+  const { values, positionals } = parseArgs({
+    args: argv,
+    options: {
+      template: { type: "string", short: "t" },
+      out: { type: "string", short: "o" },
+      dir: { type: "string" },
+      include: { type: "string", multiple: true },
+      ignore: { type: "string", multiple: true },
+      debounce: { type: "string" },
+      once: { type: "boolean" },
+      verbose: { type: "boolean" },
+      "allow-html": { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+    allowPositionals: true,
+  });
+
+  if (values.help) {
+    printHelp();
+    return 0;
+  }
+
+  const input = positionals[0];
+  if (!input) {
+    console.error("ERROR: <input> is required for watch command. Use --help.");
+    return 2;
+  }
+
+  const outDir = values.out;
+  if (!outDir) {
+    console.error("ERROR: --out (-o) is required for watch command.");
+    return 2;
+  }
+
+  const workingDir = values.dir ?? process.cwd();
+  const inputAbs = path.resolve(workingDir, input);
+
+  // Parse debounce as number
+  let debounce = 200;
+  if (values.debounce) {
+    const parsed = Number.parseInt(values.debounce, 10);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      console.error("ERROR: --debounce must be a positive number");
+      return 2;
+    }
+    debounce = parsed;
+  }
+
+  return await runWatch(inputAbs, {
+    templateDir: values.template ?? ".md-xformer/templates",
+    outDir,
+    ext: "html",
+    workingDir,
+    include: values.include ?? [],
+    ignore: values.ignore ?? [],
+    debounce,
+    once: Boolean(values.once),
+    verbose: Boolean(values.verbose),
+    allowHtml: Boolean(values["allow-html"]),
+  });
 }
 
 async function handleInitCommand(argv: string[]): Promise<number> {
@@ -107,9 +183,13 @@ export async function runCli(argv: string[]): Promise<number> {
 }
 
 async function mainWithArgs(argv: string[]): Promise<number> {
-  // Check if first positional is "init" command
+  // Check if first positional is "init" or "watch" command
   if (argv[0] === "init") {
     return await handleInitCommand(argv.slice(1));
+  }
+
+  if (argv[0] === "watch") {
+    return await handleWatchCommand(argv.slice(1));
   }
 
   const { values, positionals } = parseArgs({
@@ -179,50 +259,35 @@ async function mainWithArgs(argv: string[]): Promise<number> {
 
   const cwd = process.cwd();
 
-  let ok = 0;
-  let ng = 0;
-
-  for (const mdFileAbs of mdFiles) {
-    try {
-      const md = await fs.readFile(mdFileAbs, "utf-8");
-      const html = transformMarkdownToHtml(md, templates, {
-        verbose: opts.verbose,
-        allowHtml: opts.allowHtml,
-      });
-
-      const outFileAbs = toOutPath(mdFileAbs, cwd, outAbs, opts.ext);
-
-      if (opts.verbose) {
-        console.log(
-          `[emit] ${path.relative(cwd, mdFileAbs)} -> ${path.relative(
-            cwd,
-            outFileAbs,
-          )}`,
-        );
-      }
-
-      if (!opts.dryRun) {
-        await ensureDir(path.dirname(outFileAbs));
-        await fs.writeFile(outFileAbs, html, "utf-8");
-      }
-
-      ok++;
-    } catch (e) {
-      ng++;
-      console.error(`[error] ${mdFileAbs}`);
-      console.error(e);
+  if (opts.dryRun) {
+    // In dry-run mode, just verify files exist
+    if (opts.verbose) {
+      console.log(`[done] ok=${mdFiles.length} ng=0`);
     }
+    return 0;
   }
 
-  if (ng > 0) {
+  const result = await buildMarkdownFiles(
+    inputAbs,
+    cwd,
+    outAbs,
+    opts.ext,
+    templates,
+    {
+      verbose: opts.verbose,
+      allowHtml: opts.allowHtml,
+    },
+  );
+
+  if (result.ng > 0) {
     process.exitCode = 1;
   }
 
   if (opts.verbose) {
-    console.log(`[done] ok=${ok} ng=${ng}`);
+    console.log(`[done] ok=${result.ok} ng=${result.ng}`);
   }
 
-  return ng > 0 ? 1 : 0;
+  return result.ng > 0 ? 1 : 0;
 }
 
 const invoked = process.argv[1];
