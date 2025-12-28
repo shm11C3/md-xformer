@@ -452,16 +452,14 @@ describe("CLI (dist)", () => {
 
     // Verify files were created
     expect(
-      existsSync(
-        path.join(root, ".md-xformer/templates/document.template.html"),
-      ),
-    ).toBe(true);
-    expect(
       existsSync(path.join(root, ".md-xformer/templates/h2.template.html")),
     ).toBe(true);
-    expect(existsSync(path.join(root, ".md-xformer/assets/template.css"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(path.join(root, ".md-xformer/templates/h3.template.html")),
+    ).toBe(true);
+    expect(
+      existsSync(path.join(root, ".md-xformer/templates/p.template.html")),
+    ).toBe(true);
     expect(existsSync(path.join(root, "articles/sample.md"))).toBe(true);
 
     // Verify content
@@ -635,6 +633,6 @@ describe("CLI (dist)", () => {
 
     const html = await fs.readFile(outFile, "utf-8");
     expect(html).toContain("Sample Article");
-    expect(html).toContain('class="wp-heading"');
+    expect(html).toContain('id="introduction"');
   });
 });

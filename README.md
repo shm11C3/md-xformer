@@ -60,14 +60,10 @@ This creates:
 ```txt
 .md-xformer/
   templates/
-    document.template.html
     h2.template.html
     h3.template.html
     p.template.html
     codeblock.template.html
-    toc.template.html
-  assets/
-    template.css
 articles/
   sample.md
 ```
@@ -87,8 +83,8 @@ md-xformer init [--preset <name>] [--dir <path>] [--force] [--dry-run]
 ```
 
 - `--preset <name>` — Choose scaffold preset:
-  - `wordpress` (default): WordPress-friendly HTML with rich styling
-  - `generic`: Minimal HTML structure
+  - `wordpress` (default): Standard templates for common elements
+  - `generic`: Minimal template set
 - `--dir <path>` — Target directory (defaults to current directory)
 - `--force` — Overwrite existing files
 - `--dry-run` — Preview what would be created without writing files
@@ -140,11 +136,10 @@ template/
 ├── h2.template.html
 ├── h3.template.html
 ├── codeblock.template.html
-├── document.template.html # in progress 
 └── p.template.html
 ```
 
-> **Tip:** Run `md-xformer init` to generate a complete set of templates and CSS automatically.
+> **Tip:** Run `md-xformer init` to generate a starter set of templates automatically.
 
 ### Customizing Templates
 
@@ -152,7 +147,6 @@ After running `md-xformer init`, you can customize templates in `.md-xformer/tem
 
 1. Edit any `.template.html` file to change the HTML structure
 2. Add new template files for other elements (e.g., `h4.template.html`, `blockquote.template.html`)
-3. Modify `.md-xformer/assets/template.css` to adjust styling
 
 ### Example: `h2.template.html`
 

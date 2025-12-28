@@ -43,11 +43,6 @@ describe("init", () => {
 
     // Check that files were created
     expect(
-      existsSync(
-        path.join(root, ".md-xformer/templates/document.template.html"),
-      ),
-    ).toBe(true);
-    expect(
       existsSync(path.join(root, ".md-xformer/templates/h2.template.html")),
     ).toBe(true);
     expect(
@@ -61,12 +56,6 @@ describe("init", () => {
         path.join(root, ".md-xformer/templates/codeblock.template.html"),
       ),
     ).toBe(true);
-    expect(
-      existsSync(path.join(root, ".md-xformer/templates/toc.template.html")),
-    ).toBe(true);
-    expect(existsSync(path.join(root, ".md-xformer/assets/template.css"))).toBe(
-      true,
-    );
     expect(existsSync(path.join(root, "articles/sample.md"))).toBe(true);
 
     // Verify content
@@ -99,19 +88,13 @@ describe("init", () => {
 
     // Check that files were created (fewer than wordpress)
     expect(
-      existsSync(
-        path.join(root, ".md-xformer/templates/document.template.html"),
-      ),
-    ).toBe(true);
-    expect(
       existsSync(path.join(root, ".md-xformer/templates/h2.template.html")),
     ).toBe(true);
     expect(
-      existsSync(path.join(root, ".md-xformer/templates/toc.template.html")),
+      existsSync(
+        path.join(root, ".md-xformer/templates/codeblock.template.html"),
+      ),
     ).toBe(true);
-    expect(existsSync(path.join(root, ".md-xformer/assets/template.css"))).toBe(
-      true,
-    );
     expect(existsSync(path.join(root, "articles/sample.md"))).toBe(true);
 
     // Generic should not have h3 or p templates
@@ -256,8 +239,10 @@ describe("init", () => {
     expect(
       existsSync(path.join(root, ".md-xformer/templates/h3.template.html")),
     ).toBe(true);
-    expect(existsSync(path.join(root, ".md-xformer/assets/template.css"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(
+        path.join(root, ".md-xformer/templates/codeblock.template.html"),
+      ),
+    ).toBe(true);
   });
 });
