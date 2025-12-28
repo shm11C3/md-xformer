@@ -433,4 +433,208 @@ describe("CLI (dist)", () => {
     expect(html).toContain('data-lang="text"');
     expect(html).toContain("plain text");
   });
+
+  it("init command creates scaffold with wordpress preset", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-init-wp-");
+    created.push(root);
+
+    const res = spawnSync(process.execPath, [cli, "init"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("✓ Initialization complete!");
+    expect(res.stdout).toContain("wordpress");
+
+    // Verify files were created
+    expect(
+      existsSync(
+        path.join(root, ".md-xformer/templates/document.template.html"),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(path.join(root, ".md-xformer/templates/h2.template.html")),
+    ).toBe(true);
+    expect(existsSync(path.join(root, ".md-xformer/assets/template.css"))).toBe(
+      true,
+    );
+    expect(existsSync(path.join(root, "articles/sample.md"))).toBe(true);
+
+    // Verify content
+    const h2Template = await fs.readFile(
+      path.join(root, ".md-xformer/templates/h2.template.html"),
+      "utf-8",
+    );
+    expect(h2Template).toContain("{{ h2 }}");
+  });
+
+  it("init command creates scaffold with generic preset", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-init-gen-");
+    created.push(root);
+
+    const res = spawnSync(
+      process.execPath,
+      [cli, "init", "--preset", "generic"],
+      {
+        cwd: root,
+        encoding: "utf-8",
+      },
+    );
+
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("✓ Initialization complete!");
+    expect(res.stdout).toContain("generic");
+
+    // Verify files were created
+    expect(
+      existsSync(path.join(root, ".md-xformer/templates/h2.template.html")),
+    ).toBe(true);
+    expect(existsSync(path.join(root, "articles/sample.md"))).toBe(true);
+
+    // Generic should not have h3 or p templates
+    expect(
+      existsSync(path.join(root, ".md-xformer/templates/h3.template.html")),
+    ).toBe(false);
+    expect(
+      existsSync(path.join(root, ".md-xformer/templates/p.template.html")),
+    ).toBe(false);
+  });
+
+  it("init command refuses to overwrite without --force", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-init-noforce-");
+    created.push(root);
+
+    // First init
+    const res1 = spawnSync(process.execPath, [cli, "init"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(res1.status).toBe(0);
+
+    // Second init without force
+    const res2 = spawnSync(process.execPath, [cli, "init"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(res2.status).toBe(3);
+    expect(res2.stdout).toContain("already exist");
+    expect(res2.stdout).toContain("--force");
+  });
+
+  it("init command overwrites with --force", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-init-force-");
+    created.push(root);
+
+    // First init
+    const res1 = spawnSync(process.execPath, [cli, "init"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(res1.status).toBe(0);
+
+    // Modify a file
+    const h2Path = path.join(root, ".md-xformer/templates/h2.template.html");
+    await fs.writeFile(h2Path, "<h2>MODIFIED</h2>", "utf-8");
+
+    // Second init with force
+    const res2 = spawnSync(process.execPath, [cli, "init", "--force"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(res2.status).toBe(0);
+    expect(res2.stdout).toContain("Overwritten");
+
+    // File should be restored
+    const restored = await fs.readFile(h2Path, "utf-8");
+    expect(restored).toContain("{{ h2 }}");
+    expect(restored).not.toBe("<h2>MODIFIED</h2>");
+  });
+
+  it("init command does not write files in --dry-run", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-init-dry-");
+    created.push(root);
+
+    const res = spawnSync(process.execPath, [cli, "init", "--dry-run"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("[DRY RUN]");
+    expect(res.stdout).toContain("No files were written");
+
+    // No files should be created
+    expect(existsSync(path.join(root, ".md-xformer"))).toBe(false);
+    expect(existsSync(path.join(root, "articles"))).toBe(false);
+  });
+
+  it("init command returns exit code 2 for unknown preset", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-init-bad-");
+    created.push(root);
+
+    const res = spawnSync(
+      process.execPath,
+      [cli, "init", "--preset", "invalid"],
+      {
+        cwd: root,
+        encoding: "utf-8",
+      },
+    );
+
+    expect(res.status).toBe(2);
+    expect(res.stderr).toContain("Unknown preset");
+  });
+
+  it("init and then transform workflow works", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-init-workflow-");
+    created.push(root);
+
+    // Init
+    const initRes = spawnSync(process.execPath, [cli, "init"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(initRes.status).toBe(0);
+
+    // Transform the sample
+    const transformRes = spawnSync(
+      process.execPath,
+      [cli, "articles", "-t", ".md-xformer/templates", "-o", "dist"],
+      {
+        cwd: root,
+        encoding: "utf-8",
+      },
+    );
+    expect(transformRes.status).toBe(0);
+
+    // Verify output
+    const outFile = path.join(root, "dist", "articles", "sample.html");
+    expect(existsSync(outFile)).toBe(true);
+
+    const html = await fs.readFile(outFile, "utf-8");
+    expect(html).toContain("Sample Article");
+    expect(html).toContain('class="wp-heading"');
+  });
 });
