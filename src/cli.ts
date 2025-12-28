@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
+import { listPresets, runInit } from "./init.js";
 import { collectMarkdownFiles, ensureDir, removeDir, toOutPath } from "./io.js";
 import { loadTemplates } from "./templates.js";
 import { transformMarkdownToHtml } from "./transform.js";
@@ -23,11 +24,14 @@ function printHelp(): void {
     `
 Usage:
   md-xformer <input> -o <outDir> [-t <templateDir>] [--ext html] [--clean] [--dry-run] [--verbose] [--allow-html]
+  md-xformer init [--preset <name>] [--dir <path>] [--force] [--dry-run]
 
-<input>:
-  file path (.md) OR directory path (recursively finds **/*.md)
+Commands:
+  (default)            Convert Markdown to HTML
+  init                 Scaffold a new project with templates and sample content
 
-Options:
+Transform options:
+  <input>              File path (.md) OR directory path (recursively finds **/*.md)
   -t, --template-dir   Template directory (default: ./template)
   -o, --out-dir        Output directory (required)
   --ext                Output extension (default: html)
@@ -35,6 +39,15 @@ Options:
   --dry-run            Print what would be generated without writing
   --verbose            Verbose logs
   --allow-html         Allow raw HTML in Markdown input (unsafe for untrusted input)
+
+Init options:
+  --preset <name>      Scaffold preset (default: example)
+                       Available: ${listPresets().join(", ")}
+  --dir <path>         Target directory (default: .)
+  --force              Overwrite existing files
+  --dry-run            Show what would be created without writing
+
+Global options:
   -h, --help           Show help
 `.trim(),
   );
@@ -53,6 +66,32 @@ function die(msg: string, exitCode = 1): never {
   throw new CliError(msg, exitCode);
 }
 
+async function handleInitCommand(argv: string[]): Promise<number> {
+  const { values } = parseArgs({
+    args: argv,
+    options: {
+      preset: { type: "string" },
+      dir: { type: "string" },
+      force: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+    allowPositionals: false,
+  });
+
+  if (values.help) {
+    printHelp();
+    return 0;
+  }
+
+  return await runInit({
+    preset: values.preset ?? "example",
+    dir: values.dir ?? ".",
+    force: Boolean(values.force),
+    dryRun: Boolean(values["dry-run"]),
+  });
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   try {
     return await mainWithArgs(argv);
@@ -68,6 +107,11 @@ export async function runCli(argv: string[]): Promise<number> {
 }
 
 async function mainWithArgs(argv: string[]): Promise<number> {
+  // Check if first positional is "init" command
+  if (argv[0] === "init") {
+    return await handleInitCommand(argv.slice(1));
+  }
+
   const { values, positionals } = parseArgs({
     args: argv,
     options: {
