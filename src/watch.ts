@@ -96,7 +96,9 @@ function scheduleRebuild(ctx: WatchContext): void {
   }
 
   ctx.debounceTimer = setTimeout(() => {
-    void runRebuild(ctx);
+    void runRebuild(ctx).catch((err) => {
+      console.error("[watch] Unexpected error during rebuild:", err);
+    });
   }, ctx.opts.debounce);
 }
 
@@ -303,18 +305,30 @@ export async function runWatch(
   return new Promise<number>((resolve) => {
     process.on("SIGINT", () => {
       console.log("\n[watch] Stopping...");
-      void watcher.close().then(() => {
-        console.log("[watch] Stopped.");
-        resolve(0);
-      });
+      void watcher
+        .close()
+        .then(() => {
+          console.log("[watch] Stopped.");
+          resolve(0);
+        })
+        .catch((err) => {
+          console.error("[watch] Error closing watcher:", err);
+          resolve(1);
+        });
     });
 
     process.on("SIGTERM", () => {
       console.log("\n[watch] Stopping...");
-      void watcher.close().then(() => {
-        console.log("[watch] Stopped.");
-        resolve(0);
-      });
+      void watcher
+        .close()
+        .then(() => {
+          console.log("[watch] Stopped.");
+          resolve(0);
+        })
+        .catch((err) => {
+          console.error("[watch] Error closing watcher:", err);
+          resolve(1);
+        });
     });
   });
 }

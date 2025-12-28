@@ -18,7 +18,7 @@ describe("build", () => {
 
   afterEach(async () => {
     for (const dir of created) await removeTempDir(dir);
-    created.length = 0;
+    created.splice(0);
   });
 
   it("buildSingleFile() generates HTML from markdown", async () => {
