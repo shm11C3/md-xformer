@@ -434,7 +434,7 @@ describe("CLI (dist)", () => {
     expect(html).toContain("plain text");
   });
 
-  it("init command creates scaffold with wordpress preset", async () => {
+  it("init command creates scaffold with example preset", async () => {
     const cli = distCliPath();
     expect(existsSync(cli)).toBe(true);
 
@@ -448,7 +448,7 @@ describe("CLI (dist)", () => {
 
     expect(res.status).toBe(0);
     expect(res.stdout).toContain("✓ Initialization complete!");
-    expect(res.stdout).toContain("wordpress");
+    expect(res.stdout).toContain("example");
 
     // Verify files were created
     expect(

@@ -23,17 +23,17 @@ describe("init", () => {
 
   it("listPresets() returns available presets", () => {
     const presets = listPresets();
-    expect(presets).toContain("wordpress");
+    expect(presets).toContain("example");
     expect(presets).toContain("generic");
     expect(presets.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("runInit() creates expected files for wordpress preset", async () => {
+  it("runInit() creates expected files for example preset", async () => {
     const root = await makeTempDir("md-xformer-init-wp-");
     created.push(root);
 
     const exitCode = await runInit({
-      preset: "wordpress",
+      preset: "example",
       dir: root,
       force: false,
       dryRun: false,
@@ -86,7 +86,7 @@ describe("init", () => {
 
     expect(exitCode).toBe(0);
 
-    // Check that files were created (fewer than wordpress)
+    // Check that files were created (fewer than example)
     expect(
       existsSync(path.join(root, ".md-xformer/templates/h2.template.html")),
     ).toBe(true);
@@ -112,7 +112,7 @@ describe("init", () => {
 
     // First init
     await runInit({
-      preset: "wordpress",
+      preset: "example",
       dir: root,
       force: false,
       dryRun: false,
@@ -120,7 +120,7 @@ describe("init", () => {
 
     // Second init without force
     const exitCode = await runInit({
-      preset: "wordpress",
+      preset: "example",
       dir: root,
       force: false,
       dryRun: false,
@@ -140,7 +140,7 @@ describe("init", () => {
 
     // First init
     await runInit({
-      preset: "wordpress",
+      preset: "example",
       dir: root,
       force: false,
       dryRun: false,
@@ -155,7 +155,7 @@ describe("init", () => {
 
     // Second init with force
     const exitCode = await runInit({
-      preset: "wordpress",
+      preset: "example",
       dir: root,
       force: true,
       dryRun: false,
@@ -174,7 +174,7 @@ describe("init", () => {
     created.push(root);
 
     const exitCode = await runInit({
-      preset: "wordpress",
+      preset: "example",
       dir: root,
       force: false,
       dryRun: true,
@@ -219,7 +219,7 @@ describe("init", () => {
     );
 
     const exitCode = await runInit({
-      preset: "wordpress",
+      preset: "example",
       dir: root,
       force: false,
       dryRun: false,

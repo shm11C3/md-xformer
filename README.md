@@ -83,7 +83,7 @@ md-xformer init [--preset <name>] [--dir <path>] [--force] [--dry-run]
 ```
 
 - `--preset <name>` — Choose scaffold preset:
-  - `wordpress` (default): Standard templates for common elements
+  - `example` (default): Standard templates for common elements
   - `generic`: Minimal template set
 - `--dir <path>` — Target directory (defaults to current directory)
 - `--force` — Overwrite existing files
@@ -92,7 +92,7 @@ md-xformer init [--preset <name>] [--dir <path>] [--force] [--dry-run]
 **Examples:**
 
 ```bash
-# Initialize with WordPress preset (default)
+# Initialize with example preset (default)
 md-xformer init
 
 # Initialize with minimal generic preset

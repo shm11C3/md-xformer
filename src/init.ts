@@ -23,8 +23,8 @@ const CONFIG_DIR = ".md-xformer";
 
 // Scaffold presets
 const PRESETS: Record<string, Preset> = {
-  wordpress: {
-    name: "wordpress",
+  example: {
+    name: "example",
     files: [
       {
         path: `${CONFIG_DIR}/templates/h2.template.html`,

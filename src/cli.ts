@@ -41,7 +41,7 @@ Transform options:
   --allow-html         Allow raw HTML in Markdown input (unsafe for untrusted input)
 
 Init options:
-  --preset <name>      Scaffold preset (default: wordpress)
+  --preset <name>      Scaffold preset (default: example)
                        Available: ${listPresets().join(", ")}
   --dir <path>         Target directory (default: .)
   --force              Overwrite existing files
@@ -85,7 +85,7 @@ async function handleInitCommand(argv: string[]): Promise<number> {
   }
 
   return await runInit({
-    preset: values.preset ?? "wordpress",
+    preset: values.preset ?? "example",
     dir: values.dir ?? ".",
     force: Boolean(values.force),
     dryRun: Boolean(values["dry-run"]),
