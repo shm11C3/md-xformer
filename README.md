@@ -110,11 +110,13 @@ md-xformer init --force
 
 ## Usage
 
+### Transform Command (One-time Build)
+
 ```bash
 md-xformer <input> -o <outDir> [-t <templateDir>] [--ext html] [--clean] [--dry-run] [--verbose] [--allow-html]
 ```
 
-### Example
+**Example:**
 
 ```bash
 md-xformer articles \
@@ -125,6 +127,63 @@ md-xformer articles \
 - `articles` — Markdown file or directory
 - `template` — Directory containing HTML templates (must exist)
 - `dist` — Output directory
+
+### Watch Command (Auto-rebuild on Changes)
+
+The `watch` command monitors your Markdown files, templates, and assets, automatically rebuilding when changes are detected.
+
+```bash
+md-xformer watch <input> [-t <templateDir>] [-o <outDir>] [options]
+```
+
+**Options:**
+
+- `-t, --template <dir>` — Template directory (default: `.md-xformer/templates`)
+- `-o, --out <path>` — Output directory (required)
+- `--dir <path>` — Working directory (default: current directory)
+- `--include <glob>` — Additional watch patterns (repeatable)
+- `--ignore <glob>` — Ignore patterns (repeatable)
+- `--debounce <ms>` — Debounce interval in milliseconds (default: 200)
+- `--once` — Run a single build then exit (useful for testing)
+- `--verbose` — Show detailed logs
+- `--allow-html` — Allow raw HTML in Markdown input
+
+**Examples:**
+
+```bash
+# Watch all articles and rebuild on changes
+md-xformer watch articles -t .md-xformer/templates -o dist
+
+# Watch a single file
+md-xformer watch articles/post.md -t .md-xformer/templates -o dist
+
+# Watch with custom debounce and verbose output
+md-xformer watch articles -t .md-xformer/templates -o dist --debounce 500 --verbose
+
+# Watch additional files (e.g., custom CSS/assets)
+md-xformer watch articles -t .md-xformer/templates -o dist --include "assets/**/*.css"
+```
+
+**What gets watched:**
+
+By default, the watch command monitors:
+- All `.md` files in the input directory (or the specific input file)
+- All `.html` template files in the template directory
+- All `.css` files in the template directory
+- Any additional patterns specified with `--include`
+
+**What gets ignored:**
+
+By default, these patterns are ignored to prevent rebuild loops:
+- `node_modules/**`
+- `dist/**`
+- `.git/**`
+- The output directory specified with `-o`
+- Any additional patterns specified with `--ignore`
+
+**Keyboard shortcuts:**
+
+- `Ctrl+C` — Stop watching and exit gracefully
 
 ## Template Structure
 
