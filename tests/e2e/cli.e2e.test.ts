@@ -635,4 +635,113 @@ describe("CLI (dist)", () => {
     expect(html).toContain("Sample Article");
     expect(html).toContain('id="introduction"');
   });
+
+  it("watch --once builds files and exits", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-watch-once-");
+    created.push(root);
+
+    const inputDir = path.join(root, "input");
+    const outDir = path.join(root, "out");
+    const templateDir = path.join(root, "template");
+
+    await fs.mkdir(inputDir, { recursive: true });
+    await fs.mkdir(templateDir, { recursive: true });
+
+    await fs.writeFile(
+      path.join(templateDir, "h2.template.html"),
+      '<h2 id="{{ id }}">{{ h2 }}</h2>',
+    );
+    await fs.writeFile(
+      path.join(templateDir, "p.template.html"),
+      '<p class="content">{{ p }}</p>',
+    );
+
+    await fs.writeFile(
+      path.join(inputDir, "test.md"),
+      "## Watch Test\n\nThis is a test.\n",
+    );
+
+    const res = spawnSync(
+      process.execPath,
+      [cli, "watch", "input", "-o", "out", "-t", "template", "--once"],
+      {
+        cwd: root,
+        encoding: "utf-8",
+        timeout: 10000,
+      },
+    );
+
+    expect(res.status).toBe(0);
+
+    const outFile = path.join(outDir, "input", "test.html");
+    expect(existsSync(outFile)).toBe(true);
+
+    const html = await fs.readFile(outFile, "utf-8");
+    expect(html).toContain('<h2 id="watch-test">Watch Test</h2>');
+    expect(html).toContain('<p class="content">This is a test.</p>');
+  });
+
+  it("watch --once with --verbose shows watch logs", async () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const root = await makeTempDir("md-xformer-e2e-watch-verbose-");
+    created.push(root);
+
+    const inputDir = path.join(root, "input");
+    const outDir = path.join(root, "out");
+    const templateDir = path.join(root, "template");
+
+    await fs.mkdir(inputDir, { recursive: true });
+    await fs.mkdir(templateDir, { recursive: true });
+
+    await fs.writeFile(
+      path.join(templateDir, "p.template.html"),
+      "<p>{{ p }}</p>",
+    );
+    await fs.writeFile(path.join(inputDir, "a.md"), "Hello\n");
+
+    const res = spawnSync(
+      process.execPath,
+      [
+        cli,
+        "watch",
+        "input",
+        "-o",
+        "out",
+        "-t",
+        "template",
+        "--once",
+        "--verbose",
+      ],
+      {
+        cwd: root,
+        encoding: "utf-8",
+        timeout: 10000,
+      },
+    );
+
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("[watch]");
+
+    const outFile = path.join(outDir, "input", "a.html");
+    expect(existsSync(outFile)).toBe(true);
+  });
+
+  it("help includes watch command", () => {
+    const cli = distCliPath();
+    expect(existsSync(cli)).toBe(true);
+
+    const res = spawnSync(process.execPath, [cli, "--help"], {
+      encoding: "utf-8",
+    });
+
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain("watch");
+    expect(res.stdout).toContain("--debounce-ms");
+    expect(res.stdout).toContain("--once");
+  });
 });
